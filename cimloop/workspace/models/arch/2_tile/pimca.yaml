@@ -1,0 +1,22 @@
+{{include_text('defines.yaml')}}
+
+architecture:
+  # ======================= Top level is !Hierarchical =======================
+  nodes:
+  - !Container # Tile top-level
+    name: tile
+    <<<: [*container_defaults]
+    attributes: {has_power_gating: True}
+
+  - !Container
+    name: pe_cluster
+    <<<: [*container_defaults]
+    spatial: {meshX: 6}
+
+    
+  - !Container # Macro
+    name: macro_in_tile # long name so it doesn't conflict with other names
+    <<<: [*container_defaults, *spatial_map_all_weights]
+    attributes: {has_power_gating: True}
+    spatial: {meshX: 18}
+    max_utilization: {spatial: {factors: [('M=' + str(macro_in_tile.get_fanout()))]}}

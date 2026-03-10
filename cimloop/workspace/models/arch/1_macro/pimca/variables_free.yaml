@@ -1,0 +1,47 @@
+variables:
+  version: 0.4
+  # ===========================================================================
+  # Specific to this architecture
+  # ===========================================================================
+
+  # ===========================================================================
+  # Set by CiM Processor
+  # ===========================================================================
+  ARRAY_WORDLINES:        Should have been set by ArrayProcessor.
+  ARRAY_BITLINES:         Should have been set by ArrayProcessor.
+  ARRAY_PARALLEL_INPUTS:  Should have been set by ArrayProcessor.
+  ARRAY_PARALLEL_OUTPUTS: Should have been set by ArrayProcessor.
+  ARRAY_PARALLEL_WEIGHTS: Should have been set by ArrayProcessor.
+
+  # ===========================================================================
+  # Encoding-dependent parameters
+  # ===========================================================================
+  ENCODED_INPUT_BITS:  INPUT_BITS 
+  ENCODED_WEIGHT_BITS: WEIGHT_BITS
+  ENCODED_OUTPUT_BITS: OUTPUT_BITS
+
+  INPUT_ENCODING_FUNC: offset_encode_hist
+  WEIGHT_ENCODING_FUNC: offset_encode_hist
+
+  # ===========================================================================
+  # Architecture & CiM Array Structure
+  # ===========================================================================
+  CIM_UNIT_WIDTH_CELLS:  1
+  CIM_UNIT_DEPTH_CELLS:  1
+  BITS_PER_CELL:         1
+
+  # ===========================================================================
+  # Data Converters
+  # ===========================================================================
+  ADC_RESOLUTION: 4
+  VOLTAGE_DAC_RESOLUTION: 1
+  TEMPORAL_DAC_RESOLUTION: 1
+  DAC_RESOLUTION: max(VOLTAGE_DAC_RESOLUTION, TEMPORAL_DAC_RESOLUTION)
+  N_ADC_PER_BANK: 1
+
+  # ===========================================================================
+  # Hardware
+  # ===========================================================================
+  BASE_LATENCY: 25e-9  # ns per cycle
+  GLOBAL_CYCLE_SECONDS: BASE_LATENCY 
+  READ_PULSE_WIDTH: GLOBAL_CYCLE_SECONDS
