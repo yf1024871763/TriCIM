@@ -2,9 +2,10 @@ import argparse
 import yaml
 import logging
 import time
+import sys
 from src.engine import TriCIMEngine
 
-# 规范化日志输出
+# Configure standard logging format
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def load_config(config_path):
@@ -17,7 +18,8 @@ def main():
     args = parser.parse_args()
     
     config = load_config(args.config)
-    import sys
+    
+    # Dynamically append timeloop scripts path
     scripts_path = config.get('paths', {}).get('timeloop_scripts', '')
     if scripts_path and scripts_path not in sys.path:
         sys.path.append(scripts_path)
@@ -26,7 +28,7 @@ def main():
     engine = TriCIMEngine(config)
     
     # =====================================================================
-    # 1. 动态容量与负载量计算 (Capacity vs Workload Assessment)
+    # 1. Capacity vs Workload Assessment
     # =====================================================================
     weights = []
     for layer in engine.layers:
@@ -42,10 +44,10 @@ def main():
     block = config['model'].get('block', 1)
     precision = config['hardware'].get('precision', 16)
     
-    # 针对 Transformer 乘上多头注意力的复制系数
+    # Apply multi-head attention replication factor for Transformers
     if is_transformer:
         try:
-            # 动态查找 A 和 Z0 的索引，替代原硬编码的 weights[0] 和 weights[6]
+            # Dynamically find indices for A and Z0 to avoid hardcoding
             a_idx = engine.layers.index('A')
             z0_idx = engine.layers.index('Z0')
             weights[a_idx] *= head_num
@@ -61,7 +63,7 @@ def main():
     logging.info(f"Arch size(bit) = {arch_size_bits} | Workload size(bit) = {total_workload_bits}")
     
     # =====================================================================
-    # 2. 智能路由调度 (Smart Execution Routing)
+    # 2. Smart Execution Routing
     # =====================================================================
     start_time = time.time()
     

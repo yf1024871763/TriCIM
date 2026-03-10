@@ -589,7 +589,10 @@ class TriCIMEngine:
             layers_cal.append(current_layer_cal)
             layers_bubble.append(current_layer_bubble)
             layers_weight_update.append(current_layer_weight)
-
+        
+        plot_path = os.path.join(self.paths['script_root'], f"ISAAC-{self.dnn}")
+        os.makedirs(plot_path, exist_ok=True)
+        plot.plot_combined_timelines_block_batch(plot_path, layers_cal, layers_bubble, layers_weight_update, actual_time=actual_time)
         # 9. Energy & Cycle Calculation
         origin_arch_path = os.path.join(self.paths['arch_root'], "pipeline_origin.yaml")
         self.analyzer.modify_arch_yaml(origin_arch_path, self.hw['tile_num'])
@@ -733,7 +736,7 @@ class TriCIMEngine:
 
         while i < len(self.layers):
             lb = round(allocation[i] * 0.5) if round(allocation[i] * 0.5) != 0 else 1
-            bound.append((max(min_tile_allocation[i], lb), min(allocation[i] + self.hw['tile_num'] * alpha, allocation[i] * 6)))
+            bound.append((max(min_tile_allocation[i], lb), min(allocation[i] + self.hw['tile_num'] * alpha, allocation[i] * 4)))
             if self.layers[i] in FNN[1:]:
                 i += 2
             elif self.layers[i] in Projection:
