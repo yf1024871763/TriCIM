@@ -528,6 +528,7 @@ class FitnessEvaluator:
                         _, cur_time_scale, _, last_time, FFN_dataspace['Z1'] = self.pipeline_analyzer.parse_dataspace(
                             output_path_pipeline[self.layers.index('Z1')], workload[self.layers.index('Z1')], start_time=start_time
                         )  
+
                         time_scale.append(cur_time_scale) 
                         actual_time, _, _, _, _, bubble, cal_time, next_start_time, FFN_dataspace['Z1'] = self.pipeline_analyzer.pipeline_analysis(
                             time_scale[2], 0, 0, Input_dataspace=Attention_dataspace['Z0'],
@@ -547,6 +548,7 @@ class FitnessEvaluator:
                         _, cur_time_scale, _, last_time, FFN_dataspace['FFN1'] = self.pipeline_analyzer.parse_dataspace(
                             output_path_pipeline[self.layers.index('FFN1')], workload[self.layers.index('FFN1')], start_time=start_time
                         )  
+                        
                         time_scale.append(cur_time_scale) 
                         actual_time, _, _, _, _, bubble, cal_time, next_start_time, FFN_dataspace['FFN1'] = self.pipeline_analyzer.pipeline_analysis(
                             time_scale[3], 0, 0, Input_dataspace=FFN_dataspace['Z1'],

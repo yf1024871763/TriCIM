@@ -16,7 +16,7 @@ class PipelineAnalyzer:
     """
     def __init__(self, config):
         self.config = config
-        self.dnn_name = config.get('dnn', 'resnet18')
+        self.dnn_name = config['model'].get('dnn', 'resnet18')
         self.hw = config.get('hardware', {})
         self.DNN = self.dnn_name    
         self.hardware_level = self.hw.get('hardware_level', 1)
@@ -39,15 +39,16 @@ class PipelineAnalyzer:
         
         # Dynamically load layers from the configured workloads path
         workload_dir = os.path.join(self.config['paths']['workload_root'], self.dnn_name)
+
         if os.path.exists(workload_dir):
             self.layers = sorted([f.split('.')[0] for f in os.listdir(workload_dir) if f != "index.yaml" and f.endswith(".yaml")])
         else:
             logging.warning(f"Workload directory not found: {workload_dir}")
             self.layers = []
 
-        self.transformer = config.get('transformer', False)
-        self.head_num = config.get('head_num', 1)
-        self.block = config.get('block', 1)
+        self.transformer = config['model'].get('transformer', False)
+        self.head_num = config['model'].get('head_num', 12 if self.transformer else 1)
+        self.block = config['model'].get('block', 1)
         self.shortcut = [0 for _ in range(len(self.layers))]
         
         self.dim = ['C', 'M', 'P', 'Q', 'R', 'S', 'N']

@@ -1,13 +1,13 @@
 model:
-  dnn: "resnet18"
-  transformer: false
+  dnn: "bert"
+  transformer: True
   head_num: 12
   block: 12
   batch_size: 4
 
 hardware:
   hardware_level: 1
-  tile_num: 32
+  tile_num: 168
   macro_num: 12
   core_num: 8
   array_col: 128

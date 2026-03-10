@@ -74,9 +74,10 @@ def main():
     else:
         logging.info("💡 [Decision] Arch Size < Workload. Routing to Multi-Layer Grouping Evaluation.")
         if is_transformer:
+            logging.info("Running Multi-Layer Grouping with BO Optimization for Transformer...")
             engine.run_multi_layer_transformer_batch(batch_size=config['model'].get('batch_size', 1))
         else:
-            # CNN 进入基于 DFS 的成组搜索和 BO 优化空间
+            logging.info("Running Multi-Layer Grouping with BO Optimization for CNN...")
             engine.construct_allocation_space(batch_size=config['model'].get('batch_size', 1))
             
     end_time = time.time()
