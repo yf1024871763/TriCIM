@@ -26,27 +26,30 @@ TriCIM/
 ├── main.py                     # The smart dispatch center: assesses capacity vs. workload.
 ├── configs/
 │   └── default.yaml            # Centralized hardware, model, and path configurations.
+├── cimloop/                    # Integrated Timeloop/Accelergy wrapper for CIM evaluation.
+├── booksim2/                   # Integrated BookSim 2.0 for cycle-level NoC simulation.
 ├── src/
 │   ├── engine.py               # Orchestrator handling resource allocation and scheduling.
 │   ├── Bayes_opt.py            # Pure Bayesian Optimization engine (GPyOpt).
 │   ├── fitness.py              # Evaluator bridging BO constraints and hardware simulations.
 │   ├── ParallelExecutor.py     # Multi-process execution for Timeloop/Accelergy tasks.
 │   ├── pipeline_analyzer.py    # Parses dataspaces, calculates pipeline bubbles and strides.
-│   ├── noc.py                  # BookSim 2.0 wrapper for NoC congestion modeling.
+│   ├── noc.py                  # BookSim wrapper for NoC congestion modeling.
 │   └── function.py             # Heuristics for greedy tile allocation and subgraph grouping.
 ```
 ## 🛠️ Prerequisites
 To run the TriCIM framework, ensure the following dependencies are installed:
 
-* Python 3.8+
+* **Python 3.8+**
 
-* Python Libraries: numpy, pandas, PyYAML, GPyOpt, matplotlib
+* **Python Libraries: numpy, pandas, PyYAML, GPyOpt, matplotlib**
+* **System Dependencies: A C++ compiler (e.g., g++ or clang) and make to build the integrated simulators.**
 
 Hardware Evaluation Backends:
 
-* Timeloop & Accelergy: Required for cycle-accurate CIM array simulation and energy estimation.
+* **Cimloop (Timeloop & Accelergy):** Included in the repository. Required for cycle-accurate CIM array simulation and energy estimation.
 
-* BookSim 2.0: Required for cycle-level Network-on-Chip (NoC) routing and latency evaluation.
+* **BookSim 2.0**: Required for cycle-level Network-on-Chip (NoC) routing and latency evaluation.
 
 ## 🚀 Quick Start
 ### 1. Configure the Workspace  
