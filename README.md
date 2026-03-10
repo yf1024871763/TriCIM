@@ -24,18 +24,23 @@ TriCIM is built with a highly decoupled, modular software architecture, bridging
 ```text
 TriCIM/
 ├── main.py                     # The smart dispatch center: assesses capacity vs. workload.
+├── Makefile                    # Installation script for building BookSim2 and Timeloop/Accelergy.
+├── requirements.txt            # Python dependencies (e.g., PyYAML, GPyOpt, numpy, pandas).
+├── LICENSE                     # MIT License.
+├── README.md                   # Project documentation.
 ├── configs/
 │   └── default.yaml            # Centralized hardware, model, and path configurations.
 ├── cimloop/                    # Integrated Timeloop/Accelergy wrapper for CIM evaluation.
 ├── booksim2/                   # Integrated BookSim 2.0 for cycle-level NoC simulation.
-├── src/
-│   ├── engine.py               # Orchestrator handling resource allocation and scheduling.
-│   ├── Bayes_opt.py            # Pure Bayesian Optimization engine (GPyOpt).
-│   ├── fitness.py              # Evaluator bridging BO constraints and hardware simulations.
-│   ├── ParallelExecutor.py     # Multi-process execution for Timeloop/Accelergy tasks.
-│   ├── pipeline_analyzer.py    # Parses dataspaces, calculates pipeline bubbles and strides.
-│   ├── noc.py                  # BookSim wrapper for NoC congestion modeling.
-│   └── function.py             # Heuristics for greedy tile allocation and subgraph grouping.
+└── src/
+    ├── engine.py               # Orchestrator handling resource allocation and scheduling.
+    ├── Bayes_opt.py            # Pure Bayesian Optimization engine (GPyOpt).
+    ├── fitness.py              # Evaluator bridging BO constraints and hardware simulations.
+    ├── ParallelExecutor.py     # Multi-process execution for Timeloop/Accelergy tasks.
+    ├── pipeline_analyzer.py    # Parses dataspaces, calculates pipeline bubbles and strides.
+    ├── noc.py                  # BookSim wrapper for NoC congestion modeling.
+    ├── function.py             # Heuristics for greedy tile allocation and subgraph grouping.
+    └── plot.py                 # Visualization tools for pipeline bubbles and computation timelines.
 ```
 ## 🛠️ Prerequisites
 To run the TriCIM framework, ensure the following dependencies are installed:
