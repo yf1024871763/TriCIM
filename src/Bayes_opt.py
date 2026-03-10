@@ -135,7 +135,7 @@ class Bayesian_Optimizer:
                 break
                     
         # 6. 保存结果
-        self._save_results()
+        #self._save_results()
         
         logging.info("\nOptimization Finished!")
         logging.info(f"Optimal Parameters: {optimizer.x_opt}")
