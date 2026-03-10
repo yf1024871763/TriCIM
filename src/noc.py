@@ -9,7 +9,7 @@ class BookSimInterface:
         self.cache = {} 
         
     def run_simulation(self, mesh_dim: int, traffic_pattern: str, injection_rate: float) -> dict:
-        # 固定使用标准包大小 (16 Flits) 探测网络拥塞基准
+
         STANDARD_PACKET_SIZE = 16 
         
         cache_key = (mesh_dim, traffic_pattern, injection_rate)
@@ -23,7 +23,7 @@ topology = mesh;
 k = {mesh_dim}; n = 2;
 routing_function = dor; 
 traffic = {traffic_pattern};
-packet_size = {STANDARD_PACKET_SIZE}; // <--- 修正：使用标准大小避免死锁
+packet_size = {STANDARD_PACKET_SIZE}; 
 injection_rate = {injection_rate};
 sim_type = latency;
 """
@@ -35,15 +35,15 @@ sim_type = latency;
             result = subprocess.run([self.booksim_binary, config_path], capture_output=True, text=True, check=True)
             output = result.stdout
             
-            # 如果崩溃，打印错误以供调试
+
             if "Deadlock" in output or "Error" in output:
                 print("[BookSim Warning] Deadlock detected in simulation.")
                 
-            # 抓取 Packet latency average = 57.8681
+
             lat_match = re.search(r'Packet latency average\s*=\s*([0-9.]+)', output)
             base_latency = float(lat_match.group(1)) if lat_match else 0.0
             
-            # --- [能量预留] 抓取总跳数(Hops) ---
+
             hops_match = re.search(r'Hops average\s*=\s*([0-9.]+)', output)
             avg_hops = float(hops_match.group(1)) if hops_match else 0.0
             

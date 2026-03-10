@@ -20,14 +20,13 @@ class FitnessEvaluator:
         self.pipeline_analyzer = engine.pipeline_analyzer
 
     def get_noc_weight_delay(self, data_size, tiles):
-        """NoC 延迟测算辅助函数"""
         width = 256 * 4 if self.dnn == 'resnet18' else 256 * 8 * 2
         if tiles <= 1 or data_size == 0:
             return data_size / width
             
         mesh_dim = max(2, math.ceil(math.sqrt(tiles)))
         
-        # 复用 engine 里的 booksim 实例（如果有的话）
+
         if hasattr(self.engine, 'booksim'):
             noc_result = self.engine.booksim.run_simulation(
                 mesh_dim=mesh_dim, traffic_pattern="uniform", injection_rate=0.3 

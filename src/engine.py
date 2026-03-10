@@ -7,7 +7,7 @@ from src.Bayes_opt import Bayesian_Optimizer
 import src.function as function
 import src.plot as plot
 from src.fitness import FitnessEvaluator
-
+from src.noc import BookSimInterface
 class TriCIMEngine:
     def __init__(self, config):
         self.config = config
@@ -22,7 +22,19 @@ class TriCIMEngine:
         self.pipeline_analyzer = PipelineAnalyzer(config)
         self.layers = self.pipeline_analyzer.layers
         self.analyzer = self.pipeline_analyzer.analyzer # Access to underlying Timeloop analysis
-        
+        try:    
+            booksim_path = config['paths'].get('booksim_binary', './booksim2/src/booksim')          
+            if os.path.exists(booksim_path):
+                self.booksim = BookSimInterface(booksim_binary_path=booksim_path)
+            else:
+                import logging
+                logging.warning(f"BookSim binary not found at {booksim_path}. NoC simulation will be bypassed.")
+                self.booksim = None
+                
+        except ImportError:
+            import logging
+            logging.warning("NoC module (BookSimInterface) not found. Running without NoC modeling.")
+            self.booksim = None
     def _generate_output_paths(self):
         """Dynamically generate output paths based on config to avoid hardcoding."""
         output_dir = self.paths['output_root']
