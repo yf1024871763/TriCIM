@@ -1,7 +1,6 @@
 # ==========================================
 # TriCIM Dependencies
 # ==========================================
-
 # Bayesian Optimization Engine
 GPyOpt>=1.2.6
 

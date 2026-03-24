@@ -20,4 +20,4 @@ paths:
   arch_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace/models/arch/3_chip"
   workload_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace/models/workloads"
   output_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace/outputs"
-  script_root: "/home/fufu/Desktop/TriCIM"
+  script_root: "/home/fufu/Desktop/Code/TriCIM"
