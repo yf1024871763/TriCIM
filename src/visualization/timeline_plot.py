@@ -319,6 +319,142 @@ def plot_combined_timelines_block_batch(
     print(f"Image saved to: {save_path}/Combined_Timelines_Block_Batch.png")
 
 
+def plot_combined_timelines_batch_layers(
+    save_path,
+    layers_cal,
+    layers_bubble,
+    layers_weight,
+    labels=None,
+    batch_labels=None,
+    actual_time=0,
+):
+    num_layers = len(layers_cal)
+    num_batches = len(layers_cal[0]) if num_layers > 0 else 0
+
+    if labels is None:
+        labels = [f"Layer {i+1}" for i in range(num_layers)]
+    if batch_labels is None:
+        batch_labels = [f"Batch {i+1}" for i in range(num_batches)]
+
+    fig, ax = plt.subplots(figsize=(22, 12))
+
+    CAL_COLOR = "#6495ED"
+    BUBBLE_COLOR = "#FFA500"
+    WEIGHT_COLOR = "#D63344"
+    BORDER_COLOR = "black"
+
+    all_points = []
+    layer_height = 0.8
+
+    for layer_idx in range(num_layers):
+        y_center = num_layers - layer_idx
+
+        for batch_idx in range(num_batches):
+            cal_data = layers_cal[layer_idx][batch_idx]
+            if cal_data and isinstance(cal_data, tuple) and len(cal_data) == 2:
+                start, end = cal_data
+                ax.broken_barh(
+                    [(start, end - start)],
+                    (y_center - layer_height / 2, layer_height),
+                    facecolor=CAL_COLOR,
+                    edgecolor=BORDER_COLOR,
+                    linewidth=0.2,
+                    label="Compute time" if (layer_idx == 0 and batch_idx == 0) else None,
+                )
+                all_points.extend([start, end])
+
+            bubble_data = layers_bubble[layer_idx][batch_idx]
+            if bubble_data:
+                if isinstance(bubble_data, dict):
+                    for start, duration in bubble_data.items():
+                        ax.broken_barh(
+                            [(start, duration)],
+                            (y_center - layer_height / 2, layer_height),
+                            facecolor=BUBBLE_COLOR,
+                            edgecolor=BORDER_COLOR,
+                            hatch="//",
+                            linewidth=0.1,
+                            alpha=0.8,
+                            label="Bubble time"
+                            if (layer_idx == 0 and batch_idx == 0)
+                            else None,
+                        )
+                        all_points.extend([start, start + duration])
+                elif isinstance(bubble_data, tuple) and len(bubble_data) == 2:
+                    start, end = bubble_data
+                    ax.broken_barh(
+                        [(start, end - start)],
+                        (y_center - layer_height / 2, layer_height),
+                        facecolor=BUBBLE_COLOR,
+                        edgecolor=BORDER_COLOR,
+                        hatch="//",
+                        linewidth=0.1,
+                        alpha=0.8,
+                        label="Bubble time"
+                        if (layer_idx == 0 and batch_idx == 0)
+                        else None,
+                    )
+                    all_points.extend([start, end])
+
+            weight_data = layers_weight[layer_idx][batch_idx]
+            if weight_data:
+                if isinstance(weight_data, tuple) and len(weight_data) == 2:
+                    weight_data = [weight_data]
+                if isinstance(weight_data, list):
+                    for start, duration in weight_data:
+                        ax.broken_barh(
+                            [(start, duration)],
+                            (y_center - layer_height / 2, layer_height),
+                            facecolor=WEIGHT_COLOR,
+                            edgecolor=BORDER_COLOR,
+                            linewidth=0.2,
+                            label="Weight update"
+                            if (layer_idx == 0 and batch_idx == 0)
+                            else None,
+                        )
+                        all_points.extend([start, start + duration])
+
+    ax.set_yticks(range(1, num_layers + 1))
+    ax.set_yticklabels(reversed(labels), fontsize=14)
+    ax.set_ylabel("Layers", fontsize=16)
+
+    if all_points:
+        min_t, max_t = min(all_points), max(all_points)
+        ax.set_xlim(min_t * 0.95, max(max_t, actual_time) * 1.05)
+    else:
+        ax.set_xlim(0, actual_time if actual_time > 0 else 1)
+
+    ax.set_xlabel("Timestamp", fontsize=16)
+    ax.set_title(
+        f"Computation, Bubble and Weight Update Times (Time Cost: {actual_time})",
+        fontsize=18,
+    )
+
+    legend_elements = [
+        Patch(facecolor=CAL_COLOR, edgecolor=BORDER_COLOR, label="Compute time"),
+        Patch(
+            facecolor=BUBBLE_COLOR,
+            edgecolor=BORDER_COLOR,
+            hatch="//",
+            label="Bubble time",
+        ),
+        Patch(facecolor=WEIGHT_COLOR, edgecolor=BORDER_COLOR, label="Weight update"),
+    ]
+    ax.legend(handles=legend_elements, loc="upper right", fontsize=14)
+    ax.grid(axis="x", alpha=0.3)
+
+    plt.tight_layout()
+    os.makedirs(save_path, exist_ok=True)
+    plt.savefig(
+        f"{save_path}/Combined_Timelines_BatchLayers.png",
+        dpi=400,
+        bbox_inches="tight",
+    )
+    plt.savefig(f"{save_path}/Combined_Timelines_BatchLayers.svg", dpi=600)
+    plt.close(fig)
+    print(f"Image saved to: {save_path}/Combined_Timelines_BatchLayers.png")
+
+
 def export_to_excel(data, filename="output.xlsx", sheet_name="Sheet1"):
     """
     Export list data to an Excel file

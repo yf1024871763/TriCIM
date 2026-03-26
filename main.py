@@ -3,9 +3,9 @@ import yaml
 import logging
 import time
 import sys
-from src.engine import TriCIMEngine
-from src.TileAllocator import TileAllocator
-import src.function as function
+from src.engine import TriCIMEngine, resolve_config_paths
+from src.allocation import TileAllocator
+from src.allocation import allocation_utils
 
 # Configure standard logging format
 logging.basicConfig(
@@ -15,7 +15,7 @@ logging.basicConfig(
 
 def load_config(config_path):
     with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+        return resolve_config_paths(yaml.safe_load(f))
 
 
 def build_legal_tiles_layer_map(engine, include_ceil_equivalence=False):
@@ -31,7 +31,7 @@ def build_legal_tiles_layer_map(engine, include_ceil_equivalence=False):
     ]
     min_tiles = [
         min(
-            function.tile_allocation(
+            allocation_utils.tile_allocation(
                 wl,
                 macro_num=engine.hw["macro_num"],
                 core_num=engine.hw["core_num"],
@@ -126,7 +126,8 @@ def main():
         except ValueError:
             logging.warning("Layers 'A' or 'Z0' not found during weight calculation.")
 
-    total_workload_bits = sum(weights) * block * precision
+    effective_block = block if is_transformer else 1
+    total_workload_bits = sum(weights) * effective_block * precision
 
     hw = config["hardware"]
     arch_size_bits = (
@@ -145,7 +146,7 @@ def main():
         w * precision for w in weights
     ]  # Scale weights by block factor for grouping
     if is_transformer:
-        grouped_indices = function.capacity_aware_transformer_grouping(
+        grouped_indices = allocation_utils.capacity_aware_transformer_grouping(
             weights=weights,
             layer_names=engine.layers,
             arch_size=arch_size_bits,
@@ -164,7 +165,14 @@ def main():
         if is_transformer:
             engine.run_transformer_evaluation()
         else:
-            engine.run_cnn_evaluation()
+            batch_size = config["model"].get("batch_size", 1)
+            if batch_size > 1:
+                logging.info(
+                    "💡 [Routing] CNN batch_size > 1 detected. Running explicit multi-batch pipeline evaluation..."
+                )
+                engine.run_multi_batch_cnn_pipeline(batch_size=batch_size)
+            else:
+                engine.run_cnn_evaluation()
     else:
         logging.info(
             "💡 [Decision] Arch Size < Workload. Routing to Capacity-Aware Evaluation."
@@ -188,7 +196,7 @@ def main():
                 )
         else:
             logging.info("Running Multi-Layer Grouping with BO Optimization for CNN...")
-            engine.construct_allocation_space(
+            engine.run_multi_layer_cnn(
                 batch_size=config["model"].get("batch_size", 1)
             )
 

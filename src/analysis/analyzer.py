@@ -7,7 +7,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
-class analysis:
+class Analysis:
     """
     Core parser for Timeloop/Cimloop output dataspace and stats.
     """
@@ -310,7 +310,6 @@ class analysis:
             return 0.0
         except Exception:
             return 0.0
-
     def extract_cim_utilized_instances(self, file_path):
         stats_txt = os.path.join(file_path, "timeloop-mapper.stats.txt")
         try:
@@ -368,3 +367,6 @@ class analysis:
             return 0.0
         except Exception:
             return 0.0
+
+
+analysis = Analysis

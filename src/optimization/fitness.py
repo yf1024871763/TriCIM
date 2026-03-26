@@ -1,7 +1,9 @@
 import copy
 import math
 import logging
-from src.ParallelExecutor import ParallelExecutor
+from src.allocation import allocation_utils
+from src.allocation import ParallelExecutor
+from src.visualization import timeline_plot
 
 
 class FitnessEvaluator:
@@ -16,6 +18,35 @@ class FitnessEvaluator:
         self.layers = engine.layers
         self.analyzer = engine.analyzer
         self.pipeline_analyzer = engine.pipeline_analyzer
+
+    def _normalize_individual(self, individual):
+        if hasattr(individual, "astype"):
+            return individual.astype(int).tolist()
+        if hasattr(individual, "flatten"):
+            return individual.flatten().astype(int).tolist()
+        return [int(x) for x in individual]
+
+    def _get_workloads(self, layers=None):
+        layer_list = layers if layers is not None else self.layers
+        return [self.analyzer.get_workload(layer) for layer in layer_list]
+
+    def _get_pipeline_output_paths(self):
+        output_path_pipeline, _ = self.engine._generate_output_paths()
+        return output_path_pipeline
+
+    def _run_parallel_mapping(self, tile_num, layers=None, macro_num=None):
+        layer_list = layers if layers is not None else self.layers
+        executor = ParallelExecutor(
+            layer_num=len(layer_list),
+            arch_path=self.paths["arch_root"],
+            tile_num=tile_num,
+            macro_num=macro_num,
+            layers=layer_list,
+            DNN=self.dnn,
+            macro_name=self.paths.get("macro_name", "isaac_isca_2016"),
+            tile_name=self.paths.get("arch_name", "isaac"),
+        )
+        executor.run_parallel()
 
     def get_noc_weight_delay(self, data_size, tiles, is_multicast=True):
         width = 256 * 4 if self.dnn == "resnet18" else 256 * 8 * 2
@@ -61,33 +92,15 @@ class FitnessEvaluator:
         Evaluate the performance of a given basic CNN pipeline configuration.
         (One search dimension per layer)
         """
-        import logging
-        from src.ParallelExecutor import ParallelExecutor
-
         # 1. Decode parameters from BO (Expand into a list of tile numbers per layer)
-        if hasattr(individual, "astype"):
-            individual = individual.astype(int).tolist()
-        elif hasattr(individual, "flatten"):
-            individual = individual.flatten().astype(int).tolist()
-        else:
-            individual = [int(x) for x in individual]
+        individual = self._normalize_individual(individual)
 
-            # logging.info(f"Evaluating CNN Pipeline Alloc: {individual}")
-
-            # 2. Execute parallel computation (Pass individual directly to tile_num)
-        executor = ParallelExecutor(
-            layer_num=len(self.layers),
-            arch_path=self.paths["arch_root"],
-            tile_num=individual,
-            layers=self.layers,
-            DNN=self.dnn,
-            MACRO_NAME="isaac_isca_2016",
-        )
-        executor.run_parallel()
+        # 2. Execute parallel computation (Pass individual directly to tile_num)
+        self._run_parallel_mapping(individual)
 
         # 3. Prepare data flow environment
-        workload = [self.analyzer.get_workload(layer) for layer in self.layers]
-        output_path_pipeline, _ = self.engine._generate_output_paths()
+        workload = self._get_workloads()
+        output_path_pipeline = self._get_pipeline_output_paths()
 
         cal_time_list = []
         bubble_list = []
@@ -173,16 +186,8 @@ class FitnessEvaluator:
 
     def transformer_fitness_callback(self, individual):
         """Evaluate the performance of a given transformer pipeline configuration."""
-        import logging
-        from src.ParallelExecutor import ParallelExecutor
-
         # Decode individual parameters
-        if hasattr(individual, "astype"):
-            individual = individual.astype(int).tolist()
-        elif hasattr(individual, "flatten"):
-            individual = individual.flatten().astype(int).tolist()
-        else:
-            individual = [int(x) for x in individual]
+        individual = self._normalize_individual(individual)
 
         x0, x1, x3, x6, x7 = individual[:5]
 
@@ -212,22 +217,14 @@ class FitnessEvaluator:
             total_tile = sum(full_alloc)
 
             # Execute parallel simulation
-        executor = ParallelExecutor(
-            layer_num=len(self.layers),
-            arch_path=self.paths["arch_root"],
-            tile_num=full_alloc,
-            layers=self.layers,
-            DNN=self.dnn,
-            MACRO_NAME="isaac_isca_2016",
-        )
-        executor.run_parallel()
+        self._run_parallel_mapping(full_alloc)
 
         # Initialize pipeline constraints and environment
-        workload = [self.analyzer.get_workload(layer) for layer in self.layers]
+        workload = self._get_workloads()
         Projection = ["Q", "K", "V"]
         Mh_attention = ["A", "Z0"]
         FNN = ["Z1", "FFN1", "FFN2"]
-        output_path_pipeline, _ = self.engine._generate_output_paths()
+        output_path_pipeline = self._get_pipeline_output_paths()
 
         start_time = 0
         cal_time_list = []
@@ -426,13 +423,10 @@ class FitnessEvaluator:
         """Evaluate the performance of a given transformer multi-batch pipeline configuration."""
         import logging
         import math
-        from src.ParallelExecutor import ParallelExecutor
 
-        output_path_pipeline, _ = self.engine._generate_output_paths()
+        output_path_pipeline = self._get_pipeline_output_paths()
 
-        workload = []
-        for layer in self.layers:
-            workload.append(self.analyzer.get_workload(layer))
+        workload = self._get_workloads()
 
         compute = []
         weight_access = []
@@ -456,12 +450,7 @@ class FitnessEvaluator:
         Mh_attention = ["A", "Z0"]
         FNN = ["Z1", "FFN1", "FFN2"]
 
-        if hasattr(individual, "astype"):
-            individual = individual.astype(int).tolist()
-        elif hasattr(individual, "flatten"):
-            individual = individual.flatten().astype(int).tolist()
-        else:
-            individual = [int(x) for x in individual]
+        individual = self._normalize_individual(individual)
 
         x0, x1, x3, x6, x7 = individual[:5]
 
@@ -479,16 +468,7 @@ class FitnessEvaluator:
         full_alloc = [max(1, j) for j in full_alloc]
 
         macro_num = [self.hw.get("macro_num", 12)] * len(self.layers)
-        executor = ParallelExecutor(
-            layer_num=len(self.layers),
-            arch_path=self.paths["arch_root"],
-            tile_num=full_alloc,
-            macro_num=macro_num,
-            layers=self.layers,
-            DNN=self.dnn,
-            MACRO_NAME="isaac_isca_2016",
-        )
-        executor.run_parallel()
+        self._run_parallel_mapping(full_alloc, macro_num=macro_num)
 
         pipeline_access = []
         for i in range(len(self.layers)):
@@ -1635,12 +1615,13 @@ class FitnessEvaluator:
 
         return actual_time
 
-    def cnn_multi_layer_fitness_callback(self, individual):
-        """Evaluate the performance of a given CNN multi-layer pipeline configuration."""
+    def _evaluate_cnn_multi_layer(
+        self, individual, generate_artifacts=False, log_prefix="Evaluation"
+    ):
+        """Shared evaluator for CNN multi-layer search and final reporting."""
         import logging
         import math
         import copy
-        from src.ParallelExecutor import ParallelExecutor
 
         alloc = self.engine.all_allocations[int(individual[0])]
         workload_group = []
@@ -1662,10 +1643,7 @@ class FitnessEvaluator:
 
         weight_access_group = []
         workload_size = []
-        workload = []
-
-        for layer in self.layers:
-            workload.append(self.analyzer.get_workload(layer))
+        workload = self._get_workloads()
 
         for i, layer in enumerate(self.layers):
             if "R" in workload[i].keys() or "S" in workload[i].keys():
@@ -1687,15 +1665,7 @@ class FitnessEvaluator:
                 weight_access += workload_size[self.layers.index(layer)]
             weight_access_group.append(weight_access)
 
-        executor = ParallelExecutor(
-            layer_num=len(tile_allocation),
-            arch_path=self.paths["arch_root"],
-            tile_num=tile_allocation,
-            layers=self.layers,
-            DNN=self.dnn,
-            MACRO_NAME="isaac_isca_2016",
-        )
-        executor.run_parallel()
+        self._run_parallel_mapping(tile_allocation)
 
         start_time = 0
         max_cost_time = 0
@@ -1721,7 +1691,7 @@ class FitnessEvaluator:
             real_delay = serialization_delay + base_latency
             return real_delay
 
-        output_path_pipeline, _ = self.engine._generate_output_paths()
+        output_path_pipeline = self._get_pipeline_output_paths()
 
         batch_size = int(self.model.get("batch_size", 1))
         end_time_dict = {key: 0 for key in self.layers}
@@ -2094,14 +2064,51 @@ class FitnessEvaluator:
             / 1e6
         )
 
-        logging.info("=== Evaluation Completed ===")
+        if generate_artifacts:
+            plot_dir = self.engine._get_plot_dir()
+            labels = [str(layer) for layer in self.layers]
+            try:
+                timeline_plot.plot_combined_timelines_batch_layers(
+                    plot_dir,
+                    current_layer_cal,
+                    current_layer_bubble,
+                    current_layer_weight,
+                    labels=labels,
+                    actual_time=max_cost_time,
+                )
+            except Exception as exc:
+                logging.warning(f"Failed to generate CNN multi-layer plot: {exc}")
+
+        cal_time, weight_time, overlap_time = allocation_utils.compute_time_statistics_cnn(
+            current_layer_cal, current_layer_weight
+        )
+
+        logging.info(f"=== {log_prefix} Completed ===")
         logging.info(f"Current Parameters: {individual}")
         logging.info(
             f"Current Fitness (Latency including NoC penalty): {max_cost_time}"
         )
+        logging.info(
+            f"Cal-only Time: {cal_time} | Weight-only Time: {weight_time} | Overlap Time: {overlap_time}"
+        )
         logging.info(f"Total Energy Assessment: {total_energy_pipeline}")
 
-        return max_cost_time
+        return {
+            "latency": max_cost_time,
+            "energy": total_energy_pipeline,
+            "cal_only": cal_time,
+            "weight_only": weight_time,
+            "overlap": overlap_time,
+            "layer_cal": current_layer_cal,
+            "layer_bubble": current_layer_bubble,
+            "layer_weight": current_layer_weight,
+            "workload_group": workload_group,
+            "tile_allocation": tile_allocation,
+        }
+
+    def cnn_multi_layer_fitness_callback(self, individual):
+        """Evaluate the performance of a given CNN multi-layer pipeline configuration."""
+        return self._evaluate_cnn_multi_layer(individual)["latency"]
 
     def multi_group_transformer_fitness_callback(
         self, individual, grouped_indices, layer_names, var_map
@@ -2116,7 +2123,6 @@ class FitnessEvaluator:
         import logging
         import math
         import copy
-        from src.ParallelExecutor import ParallelExecutor
 
         # ==========================================
         # ==========================================
@@ -2161,18 +2167,11 @@ class FitnessEvaluator:
 
                 # ==========================================
                 # ==========================================
-        executor = ParallelExecutor(
-            layer_num=len(layer_names),
-            arch_path=self.paths["arch_root"],
-            tile_num=tile_allocation,
-            macro_num=macro_allocation,
-            layers=layer_names,
-            DNN=self.dnn,
-            MACRO_NAME="isaac_isca_2016",
+        self._run_parallel_mapping(
+            tile_allocation, layers=layer_names, macro_num=macro_allocation
         )
-        executor.run_parallel()
 
-        workload = [self.analyzer.get_workload(layer) for layer in layer_names]
+        workload = self._get_workloads(layer_names)
         weight_access = []
         for i, layer in enumerate(layer_names):
             w_size = (
@@ -2186,7 +2185,7 @@ class FitnessEvaluator:
                 w_size *= head_num
             weight_access.append(w_size)
 
-        output_path_pipeline, _ = self.engine._generate_output_paths()
+        output_path_pipeline = self._get_pipeline_output_paths()
         pipeline_access = [
             self.analyzer.input_output_gen(path) for path in output_path_pipeline
         ]

@@ -6,7 +6,7 @@ import glob
 import logging
 
 
-class Bayesian_Optimizer:
+class BayesianOptimizer:
     """
     Bayesian optimization engine.
     Preserves legacy constraint logic and supports dynamic grouped constraints.
@@ -19,6 +19,10 @@ class Bayesian_Optimizer:
         n_calls=30,
         dnn_name="unknown",
         alpha=0.2,
+        initial_points=10,
+        early_stop_patience=20,
+        acquisition_weight=2,
+        random_state=42,
         tile_num=32,
         layers=None,
         head_num=1,
@@ -37,6 +41,10 @@ class Bayesian_Optimizer:
         self.n_calls = n_calls
         self.dnn_name = dnn_name
         self.alpha = alpha
+        self.initial_points = initial_points
+        self.early_stop_patience = early_stop_patience
+        self.acquisition_weight = acquisition_weight
+        self.random_state = random_state
 
         self.tile_num = tile_num
         self.layers = layers if layers is not None else []
@@ -135,22 +143,24 @@ class Bayesian_Optimizer:
             return np.array(results).reshape(-1, 1)
 
         logging.info(f"=== Starting Bayesian Optimization Initialization ===")
+        initial_design_numdata = max(1, min(self.initial_points, self.n_calls))
         optimizer = GPyOpt.methods.BayesianOptimization(
             f=objective_function,
             domain=domain,
             constraints=constraints,
             acquisition_type="EI",
-            acquisition_weight=2,
-            initial_design_numdata=10,
-            random_state=42,
+            acquisition_weight=self.acquisition_weight,
+            initial_design_numdata=initial_design_numdata,
+            random_state=self.random_state,
             feasible_region=True,
         )
 
-        patience = 20
+        patience = self.early_stop_patience
         no_improve_count = 0
         best_fx_so_far = float("inf")
+        step = 0
 
-        for step in range(self.n_calls - 10):
+        for step in range(max(0, self.n_calls - initial_design_numdata)):
             optimizer.run_optimization(max_iter=1, eps=0)
 
             current_y = optimizer.Y[-1][0]
@@ -203,3 +213,6 @@ class Bayesian_Optimizer:
         excel_filename = os.path.join(save_dir, f"{base_name}_run_{run_id}.xlsx")
         df.to_excel(excel_filename, index=False)
         logging.info(f"\n📊 Data saved to: {excel_filename}")
+
+
+Bayesian_Optimizer = BayesianOptimizer

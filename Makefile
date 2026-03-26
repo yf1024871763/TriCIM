@@ -1,14 +1,32 @@
+PYTHON ?= python3
+PIP ?= pip3
+CONFIG ?= configs/default.yaml
+ACCELERGY_REPO ?= accelergy-timeloop-infrastructure
+ACCELERGY_URL ?= https://github.com/Accelergy-Project/accelergy-timeloop-infrastructure.git
+
+.PHONY: install deps booksim run check clean
+
 install:
-	git clone --recurse-submodules https://github.com/Accelergy-Project/accelergy-timeloop-infrastructure.git
-	cd accelergy-timeloop-infrastructure
+	if [ ! -d "$(ACCELERGY_REPO)" ]; then \
+		git clone --recurse-submodules "$(ACCELERGY_URL)" "$(ACCELERGY_REPO)"; \
+	fi
+	$(PIP) install -r requirements.txt
+	$(MAKE) -C "$(ACCELERGY_REPO)" install_accelergy
+	$(PIP) install "./$(ACCELERGY_REPO)/src/timeloopfe"
+	$(MAKE) -C "$(ACCELERGY_REPO)" install_timeloop
+	$(MAKE) -C booksim2/src
 
-	# Install Accelergy
-	make install_accelergy
+deps:
+	$(PIP) install -r requirements.txt
 
-	# Install the Timeloop Python Front-End
-	pip3 install ./src/timeloopfe
+booksim:
+	$(MAKE) -C booksim2/src
 
-	# Install Timeloop
-	make install_timeloop
-	
-	cd booksim2/src && make
+run:
+	$(PYTHON) main.py --config $(CONFIG)
+
+check:
+	$(PYTHON) -m py_compile main.py $$(find src -path '*/__pycache__' -prune -o -name '*.py' -print)
+
+clean:
+	find . -path '*/__pycache__' -type d -prune -exec rm -rf {} +

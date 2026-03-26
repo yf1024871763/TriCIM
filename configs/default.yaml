@@ -1,5 +1,5 @@
 model:
-  dnn: "resnet18"
+  dnn: "vgg16"
   transformer: False
   head_num: 12
   block: 12
@@ -7,7 +7,7 @@ model:
 
 hardware:
   hardware_level: 1
-  tile_num: 32
+  tile_num: 1344
   macro_num: 12
   core_num: 8
   array_col: 128
@@ -16,8 +16,16 @@ hardware:
   precision: 16
 
 paths:
-  timeloop_scripts: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace/scripts"
-  arch_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace/models/arch/3_chip"
-  workload_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace/models/workloads"
-  output_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace/outputs"
-  script_root: "/home/fufu/Desktop/Code/TriCIM"
+  workspace_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace"
+  arch_name: "isaac"
+  macro_name: "isaac_isca_2016"
+  plot_root: "/home/fufu/Desktop/code/src/TriCIM/outputs"
+
+optimization:
+  bayes:
+    alpha: 0.2
+    max_calls: 15
+    initial_points: 10
+    early_stop_patience: 20
+    acquisition_weight: 2
+    random_state: 42

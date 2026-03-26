@@ -5,7 +5,15 @@ import logging
 
 class ParallelExecutor:
     def __init__(
-        self, layer_num, arch_path, tile_num, layers, DNN, MACRO_NAME, macro_num=None
+        self,
+        layer_num,
+        arch_path,
+        tile_num,
+        layers,
+        DNN,
+        macro_name,
+        tile_name,
+        macro_num=None,
     ):
         self.layer_num = layer_num
         self.arch_path = arch_path
@@ -13,7 +21,8 @@ class ParallelExecutor:
         self.macro_num = macro_num if macro_num is not None else [12] * layer_num
         self.layers = layers
         self.DNN = DNN
-        self.MACRO_NAME = MACRO_NAME
+        self.macro_name = macro_name
+        self.tile_name = tile_name
 
     def _worker(self, i):
         """Run one mapping task for a single layer index."""
@@ -23,8 +32,8 @@ class ParallelExecutor:
 
             utl.quick_run(
                 chip="pipeline",
-                macro=self.MACRO_NAME,
-                tile="isaac",
+                macro=self.macro_name,
+                tile=self.tile_name,
                 dnn=self.DNN,
                 layer=self.layers[i],
                 variables={

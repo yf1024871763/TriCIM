@@ -11,7 +11,7 @@ class TileAllocator:
         max_tiles_per_group=16,
         min_layers_per_group=1,
         max_layers_per_group=float("inf"),
-        workload_shape=[],
+        workload_shape=None,
     ):
         """
         :param layers: Ordered layer names.
@@ -29,7 +29,7 @@ class TileAllocator:
         self.max_layers = max_layers_per_group
         self.n_layers = len(layers)
         self.all_allocations = []
-        self.workload_shape = workload_shape
+        self.workload_shape = workload_shape if workload_shape is not None else []
         self.legal_tiles_map = {}
 
     def _get_layer_index(self, layer_name):
@@ -612,4 +612,3 @@ class TileAllocator:
             "avg_layer_positions": avg_positions,
             "most_common_groups": most_common_groups,
         }
-

@@ -4,7 +4,7 @@ import math
 import logging
 import pandas as pd
 from itertools import permutations
-from src.analyzer import analysis
+from src.analysis.analyzer import Analysis
 
 # Configure logging for open-source standard
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -37,7 +37,7 @@ class PipelineAnalyzer:
         self.per_access_energy = 3.37  # glb pJ
 
         # Initialize workload analyzer
-        self.analyzer = analysis(self.dnn_name, config=self.config)
+        self.analyzer = Analysis(self.dnn_name, config=self.config)
 
         # Dynamically load layers from the configured workloads path
         workload_dir = os.path.join(

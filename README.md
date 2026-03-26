@@ -23,24 +23,39 @@ TriCIM is built with a highly decoupled, modular software architecture, bridging
 
 ```text
 TriCIM/
-├── main.py                     # The smart dispatch center: assesses capacity vs. workload.
-├── Makefile                    # Installation script for building BookSim2 and Timeloop/Accelergy.
+├── main.py                     # The smart dispatch center: assesses capacity vs. workload and routes execution.
+├── Makefile                    # Installation/build helpers for dependencies and BookSim.
 ├── requirements.txt            # Python dependencies (e.g., PyYAML, GPyOpt, numpy, pandas).
 ├── LICENSE                     # MIT License.
 ├── README.md                   # Project documentation.
 ├── configs/
-│   └── default.yaml            # Centralized hardware, model, and path configurations.
-├── cimloop/                    # Integrated Timeloop/Accelergy wrapper for CIM evaluation.
+│   └── default.yaml            # Centralized hardware, model, path, and BO configurations.
+├── cimloop/                    # Integrated Timeloop/Accelergy workspace for CIM evaluation.
 ├── booksim2/                   # Integrated BookSim 2.0 for cycle-level NoC simulation.
+├── outputs/                    # Generated plots and intermediate output artifacts.
 └── src/
-    ├── engine.py               # Orchestrator handling resource allocation and scheduling.
-    ├── Bayes_opt.py            # Pure Bayesian Optimization engine (GPyOpt).
-    ├── fitness.py              # Evaluator bridging BO constraints and hardware simulations.
-    ├── ParallelExecutor.py     # Multi-process execution for Timeloop/Accelergy tasks.
-    ├── pipeline_analyzer.py    # Parses dataspaces, calculates pipeline bubbles and strides.
-    ├── noc.py                  # BookSim wrapper for NoC congestion modeling.
-    ├── function.py             # Heuristics for greedy tile allocation and subgraph grouping.
-    └── plot.py                 # Visualization tools for pipeline bubbles and computation timelines.
+    ├── allocation/
+    │   ├── allocation_utils.py # Greedy allocation, legal-tile handling, and grouping helpers.
+    │   ├── parallel_executor.py# Multi-process execution for Timeloop/Accelergy mapping tasks.
+    │   └── tile_allocator.py   # Explores valid multi-layer grouping/allocation candidates.
+    ├── analysis/
+    │   ├── analyzer.py         # Extracts cycles, energy, utilization, and tensor traffic from outputs.
+    │   └── pipeline_analyzer.py# Parses dataspaces and computes pipeline overlap/bubble timing.
+    ├── engine/
+    │   ├── __init__.py         # Public package exports for the engine layer.
+    │   ├── config.py           # Resolves workspace/output paths from the YAML config.
+    │   ├── core.py             # Main orchestrator for analyzers, optimizers, and execution runners.
+    │   └── types.py            # Shared lightweight data containers for engine internals.
+    ├── engine_runners/
+    │   ├── cnn_runner.py       # CNN execution flows: basic pipeline, multi-batch pipeline, and multi-layer mode.
+    │   └── transformer_runner.py # Transformer execution flows: pipeline, grouping, and multi-batch scheduling.
+    ├── noc/
+    │   └── booksim_interface.py# BookSim wrapper for NoC congestion and transfer-latency modeling.
+    ├── optimization/
+    │   ├── bayes_optimizer.py  # Bayesian Optimization engine wrapper.
+    │   └── fitness.py          # Evaluator bridging BO candidates and hardware simulations.
+    └── visualization/
+        └── timeline_plot.py    # Visualization tools for pipeline bubbles and computation timelines.
 ```
 ## 🛠️ Prerequisites
 To run the TriCIM framework, ensure the following dependencies are installed:
@@ -72,17 +87,39 @@ hardware:
   precision: 16
 
 paths:
-  timeloop_scripts: "/path/to/timeloop/scripts"
-  arch_root: "/path/to/models/arch"
-  workload_root: "/path/to/models/workloads"
-  output_root: "/path/to/outputs"
+  workspace_root: "/path/to/cimloop/workspace"
+  arch_name: "isaac"
+  macro_name: "isaac_isca_2016"
+  plot_root: "/path/to/TriCIM/outputs"
+
+optimization:
+  bayes:
+    alpha: 0.2
+    max_calls: 100
+    initial_points: 10
+    early_stop_patience: 20
+    acquisition_weight: 2
+    random_state: 42
 ```
-### 2. Launch the Evaluator
+`workspace_root` is the main CIMLoop path you need to provide. TriCIM derives `timeloop_scripts`, `workload_root`, `output_root`, and the fixed `arch_root=models/arch/3_chip` from it. The `optimization.bayes` section controls BO hyperparameters such as initial points, max calls, and early stopping patience.
+
+### 2. Install Dependencies
+Use the provided Makefile to install Python dependencies, Accelergy/Timeloop support, and build BookSim:
+```bash
+make install
+```
+
+### 3. Launch the Evaluator
 Run the main entry script. TriCIM will automatically parse the workload, determine the optimal stationary region (MS, LS, or TS), and initiate Bayesian Optimization for pipeline mapping.
 ```bash
-python main.py --config configs/default.yaml
+make run
 ```
-### 3. Analyze Results
+You can also run it directly:
+```bash
+python3 main.py --config configs/default.yaml
+```
+
+### 4. Analyze Results
 The framework outputs a clean, hierarchical log to the console detailing the parameter space exploration, current optimums, and Early Stopping triggers, alongside final energy and latency metrics.
 ## 📜 Citation
 If you use TriCIM in your research, please cite our paper:
