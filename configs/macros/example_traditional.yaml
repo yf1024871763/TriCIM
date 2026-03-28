@@ -1,24 +1,22 @@
 model:
-  dnn: "bert"
-  transformer: True
+  dnn: "vgg16"
+  transformer: False
   head_num: 12
   block: 12
   batch_size: 4
 
 hardware:
-  hardware_level: 1
-  tile_num: 168
+  tile_num: 1344
   macro_num: 12
-  core_num: 8
-  array_col: 128
-  array_row: 128
-  cim_depth: 2
-  precision: 16
+  array_col: 14
+  array_row: 12
+  cim_depth: 1
+  precision: 8
 
 paths:
   workspace_root: "/home/fufu/Desktop/accelergy-timeloop-infrastructure/cimloop/workspace"
   arch_name: "isaac"
-  macro_name: "isaac_isca_2016"
+  macro_name: "example_traditional"
   plot_root: "/home/fufu/Desktop/code/src/TriCIM/outputs"
 
 optimization:
@@ -26,6 +24,6 @@ optimization:
     alpha: 0.2
     max_calls: 100
     initial_points: 10
-    early_stop_patience: 30
+    early_stop_patience: 20
     acquisition_weight: 2
     random_state: 42

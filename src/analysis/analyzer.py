@@ -22,6 +22,7 @@ class Analysis:
         )
         self.output_dir = self.paths.get("output_root", "./outputs")
         self.arch_dir = self.paths.get("arch_root", "./arch")
+        self.arch_name = self.paths.get("arch_name", "isaac")
 
         self.tile_num = []
         self.layer_num = 0
@@ -146,12 +147,12 @@ class Analysis:
         for layer in self.layers:
             pipe_stats = os.path.join(
                 self.output_dir,
-                f"pipeline-isaac-{self.DNN}-{layer}",
+                f"pipeline-{self.arch_name}-{self.DNN}-{layer}",
                 "timeloop-mapper.stats.txt",
             )
             orig_stats = os.path.join(
                 self.output_dir,
-                f"pipeline_origin-isaac-{self.DNN}-{layer}",
+                f"pipeline_origin-{self.arch_name}-{self.DNN}-{layer}",
                 "timeloop-mapper.stats.txt",
             )
             energy_pipeline.append(self.get_total_energy(pipe_stats))
@@ -214,7 +215,7 @@ class Analysis:
         dataspace = []
         for layer in self.layers:
             folder = os.path.join(
-                self.output_dir, f"pipeline_origin-isaac-{self.DNN}-{layer}"
+                self.output_dir, f"pipeline_origin-{self.arch_name}-{self.DNN}-{layer}"
             )
             dataspace.append(self.input_output_gen(folder))
         return dataspace
@@ -223,10 +224,10 @@ class Analysis:
         if not self.layers:
             return 0, 0
         first_folder = os.path.join(
-            self.output_dir, f"pipeline-isaac-{self.DNN}-{self.layers[0]}"
+            self.output_dir, f"pipeline-{self.arch_name}-{self.DNN}-{self.layers[0]}"
         )
         last_folder = os.path.join(
-            self.output_dir, f"pipeline-isaac-{self.DNN}-{self.layers[-1]}"
+            self.output_dir, f"pipeline-{self.arch_name}-{self.DNN}-{self.layers[-1]}"
         )
         first = self.input_output_gen(first_folder)
         last = self.input_output_gen(last_folder)

@@ -127,13 +127,14 @@ class TriCIMEngine:
     def _generate_output_paths(self):
         """Dynamically generate output paths based on config to avoid hardcoding."""
         output_dir = self.paths["output_root"]
+        arch_name = self.paths.get("arch_name", "isaac")
         pipeline_paths = [
-            os.path.join(output_dir, f"pipeline-isaac-{self.dnn}-{self.layers[i]}")
+            os.path.join(output_dir, f"pipeline-{arch_name}-{self.dnn}-{self.layers[i]}")
             for i in range(len(self.layers))
         ]
         origin_paths = [
             os.path.join(
-                output_dir, f"pipeline_origin-isaac-{self.dnn}-{self.layers[i]}"
+                output_dir, f"pipeline_origin-{arch_name}-{self.dnn}-{self.layers[i]}"
             )
             for i in range(len(self.layers))
         ]
@@ -252,12 +253,18 @@ class TriCIMEngine:
         return BayesianOptimizer(**defaults)
 
     def _get_plot_dir(self):
-        plot_dir = os.path.join(self.paths["plot_root"], f"ISAAC-{self.dnn}")
+        arch_name = self.paths.get("arch_name", "isaac").upper()
+        plot_dir = os.path.join(self.paths["plot_root"], f"{arch_name}-{self.dnn}")
         os.makedirs(plot_dir, exist_ok=True)
         return plot_dir
 
     def run_cnn_evaluation(self):
         return cnn_runner.run_cnn_evaluation(self)
+
+    def run_one_tile_evaluation(self):
+        if self.model.get("transformer", False):
+            return transformer_runner.run_one_tile_evaluation(self)
+        return cnn_runner.run_one_tile_evaluation(self)
 
     def run_multi_batch_cnn_pipeline(self, batch_size=1):
         return cnn_runner.run_multi_batch_cnn_pipeline(self, batch_size=batch_size)

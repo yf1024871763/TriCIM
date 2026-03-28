@@ -7,6 +7,80 @@ from src.optimization import FitnessEvaluator
 from src.allocation import allocation_utils
 from src.visualization import timeline_plot
 
+
+def run_one_tile_evaluation(engine):
+    """
+    Serial one-tile fallback for Transformer workloads when pipeline execution
+    is impossible due to capacity limits.
+    """
+    head_num = engine.model.get("head_num", 1)
+    block = engine.model.get("block", 1)
+    batch_size = engine.model.get("batch_size", 1)
+    output_path_pipeline, _ = engine._generate_output_paths()
+    tile_allocation = [1] * len(engine.layers)
+
+    logging.info("Running one-tile serial evaluation for Transformer...")
+    engine._run_parallel_mapping(tile_allocation)
+
+    width = engine.hw.get("array_col", 128) * engine.hw.get("core_num", 8)
+
+    cycles = [engine.analyzer.get_cycle(path) for path in output_path_pipeline]
+    accesses = [engine.analyzer.input_output_gen(path) for path in output_path_pipeline]
+    inputs = [d[0]["inputs"] for d in accesses]
+    outputs = [2 * d[0]["outputs"] for d in accesses]
+    weights = [d[0]["weights"] for d in accesses]
+
+    compute_energy = []
+    write_weight_energy = []
+    for path in output_path_pipeline:
+        cim_utilized = engine.analyzer.extract_cim_utilized_instances(path)
+        cim_write_energy = engine.analyzer.extract_cim_write_energy(path)
+        vec_access = engine.analyzer.extract_vector_access_by_module(
+            path, "random_fill", "cim_unit"
+        )
+        write_energy = cim_utilized * cim_write_energy * vec_access / 1e6
+        write_weight_energy.append(write_energy)
+        compute_energy.append(
+            engine.analyzer.get_total_energy(path + "/timeloop-mapper.stats.txt")
+            - write_energy
+        )
+
+    for name in ("A", "Z0"):
+        if name in engine.layers:
+            idx = engine.layers.index(name)
+            cycles[idx] *= head_num
+            compute_energy[idx] *= head_num
+            write_weight_energy[idx] *= head_num
+            inputs[idx] *= head_num
+            outputs[idx] *= head_num
+            weights[idx] *= head_num
+
+    total_latency = (sum(cycles) + sum(weights) / width) * block * batch_size
+    total_energy = (
+        sum(compute_energy) * block * batch_size
+        + sum(write_weight_energy) * block * batch_size
+        + (sum(inputs) + sum(outputs) + sum(weights))
+        * block
+        * batch_size
+        * 112.54
+        / 8
+        / 1e6
+    )
+
+    logging.info("============= One-Tile Transformer Summary =============")
+    logging.info(f"Cycles (Serial One-Tile): {total_latency:.2f}")
+    logging.info(f"Energy (Serial One-Tile): {total_energy:.4f} pJ")
+    logging.info(f"Compute Energy: {sum(compute_energy) * block * batch_size:.4f}")
+    logging.info(
+        f"Weight Update Energy: {sum(write_weight_energy) * block * batch_size:.4f}"
+    )
+    logging.info(
+        f"Tensor Transfer Energy: {((sum(inputs) + sum(outputs) + sum(weights)) * block * batch_size * 112.54 / 8 / 1e6):.4f}"
+    )
+
+    return total_latency, total_energy
+
+
 def run_transformer_evaluation(engine):
     """
     Executes pipeline analysis specifically tailored for Transformer architectures.
@@ -95,7 +169,7 @@ def run_transformer_evaluation(engine):
     )
 
     result, _ = optimizer.run_optimization()
-    tile_allocation = result.x_opt.astype(int)
+    tile_allocation = [int(x) for x in result.x_opt]
     x0, x1, x3, x6, x7 = tile_allocation
 
     # Structure variable mapping (QKV share mapping, FFN share mapping)
@@ -478,7 +552,7 @@ def run_multi_layer_transformer_batch(engine, batch_size=None, batch=True):
     selected_indices = []
     while i < len(engine.layers):
         lb = round(allocation[i] * 0.5) if round(allocation[i] * 0.5) != 0 else 1
-        ub = min(allocation[i] + engine.hw["tile_num"] * alpha, allocation[i] * 3)
+        ub = min(allocation[i] + engine.hw["tile_num"] * alpha, allocation[i] * 4)
         bound.append((max(min_tile_allocation[i], lb), ub))
         selected_indices.append(i)
         if engine.layers[i] in FNN[1:]:
@@ -513,6 +587,7 @@ def run_multi_layer_transformer_batch(engine, batch_size=None, batch=True):
         multi_layer=True,
         batch=batch,
         max_block=getattr(engine, "max_block", 1),
+        candidate_domains=candidate_domains,
     )
 
     result, step = optimizer.run_optimization()

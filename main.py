@@ -142,6 +142,15 @@ def main():
     logging.info(
         f"Arch size(bit) = {arch_size_bits} | Workload size(bit) = {total_workload_bits}"
     )
+    layer_bits = [w * precision for w in weights]
+    can_fit_adjacent_pair = any(
+        layer_bits[i] + layer_bits[i + 1] <= arch_size_bits
+        for i in range(len(layer_bits) - 1)
+    )
+
+    if len(layer_bits) <= 1:
+        can_fit_adjacent_pair = False
+
     weights = [
         w * precision for w in weights
     ]  # Scale weights by block factor for grouping
@@ -158,7 +167,12 @@ def main():
         # =====================================================================
     start_time = time.time()
 
-    if arch_size_bits >= total_workload_bits:
+    if not can_fit_adjacent_pair:
+        logging.info(
+            "💡 [Decision] Hardware cannot keep two adjacent operators resident. Routing to one-tile serial evaluation."
+        )
+        engine.run_one_tile_evaluation()
+    elif arch_size_bits >= total_workload_bits:
         logging.info(
             "💡 [Decision] Arch Size >= Workload. Routing to Basic Pipeline Evaluation."
         )

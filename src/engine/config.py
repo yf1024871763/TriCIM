@@ -2,7 +2,30 @@ from pathlib import Path
 
 
 def resolve_config_paths(config, project_root=None):
+    config = dict(config)
     project_root = Path(project_root or Path(__file__).resolve().parents[2]).resolve()
+
+    raw_hw = dict(config.get("hardware", {}))
+    required_hw = ("tile_num", "macro_num")
+    missing_required = [key for key in required_hw if key not in raw_hw]
+    if missing_required:
+        missing_str = ", ".join(missing_required)
+        raise ValueError(
+            f"Missing required hardware config field(s): {missing_str}. "
+            "At minimum, 'tile_num' and 'macro_num' must be provided."
+        )
+
+    hw_defaults = {
+        "hardware_level": 1,
+        "core_num": 1,
+        "array_col": 1,
+        "array_row": 1,
+        "cim_depth": 1,
+        "precision": 1,
+    }
+    hardware = dict(hw_defaults)
+    hardware.update(raw_hw)
+    config["hardware"] = hardware
 
     paths = dict(config.get("paths", {}))
 

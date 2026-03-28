@@ -8,6 +8,66 @@ from src.allocation import allocation_utils
 from src.visualization import timeline_plot
 
 
+def run_one_tile_evaluation(engine):
+    """
+    Serial fallback path when the hardware cannot keep two operators resident
+    at the same time. Each layer is mapped with a single tile and evaluated
+    without pipeline overlap.
+    """
+    output_path_pipeline, _ = engine._generate_output_paths()
+    tile_allocation = [1] * len(engine.layers)
+
+    logging.info("Running one-tile serial evaluation for CNN...")
+    engine._run_parallel_mapping(tile_allocation)
+
+    metrics = engine._collect_layer_metrics(
+        include_kernel_in_weights=True,
+        clip_min_tiles=False,
+    )
+    weight_access = metrics.weight_access
+
+    width = engine.hw.get("array_col", 128) * engine.hw.get("core_num", 8)
+
+    cycles = [engine.analyzer.get_cycle(path) for path in output_path_pipeline]
+    accesses = [engine.analyzer.input_output_gen(path) for path in output_path_pipeline]
+    inputs = [d[0]["inputs"] for d in accesses]
+    outputs = [2 * d[0]["outputs"] for d in accesses]
+    weights = [d[0]["weights"] for d in accesses]
+
+    compute_energy = []
+    write_weight_energy = []
+    for path in output_path_pipeline:
+        cim_utilized = engine.analyzer.extract_cim_utilized_instances(path)
+        cim_write_energy = engine.analyzer.extract_cim_write_energy(path)
+        vec_access = engine.analyzer.extract_vector_access_by_module(
+            path, "random_fill", "cim_unit"
+        )
+        write_energy = cim_utilized * cim_write_energy * vec_access / 1e6
+        write_weight_energy.append(write_energy)
+        compute_energy.append(
+            engine.analyzer.get_total_energy(path + "/timeloop-mapper.stats.txt")
+            - write_energy
+        )
+
+    total_latency = sum(cycles) + sum(weight_access) / width
+    total_energy = (
+        sum(compute_energy)
+        + sum(write_weight_energy)
+        + (sum(inputs) + sum(outputs) + sum(weights)) * 112.54 / 8 / 1e6
+    )
+
+    logging.info("================ One-Tile CNN Summary ================")
+    logging.info(f"Cycles (Serial One-Tile): {total_latency:.2f}")
+    logging.info(f"Energy (Serial One-Tile): {total_energy:.4f} pJ")
+    logging.info(f"Compute Energy: {sum(compute_energy):.4f}")
+    logging.info(f"Weight Update Energy: {sum(write_weight_energy):.4f}")
+    logging.info(
+        f"Tensor Transfer Energy: {((sum(inputs) + sum(outputs) + sum(weights)) * 112.54 / 8 / 1e6):.4f}"
+    )
+
+    return total_latency, total_energy
+
+
 def _build_cnn_bo_bounds(engine, allocation_list, min_tile_allocation):
     alpha = engine._bo_value("alpha", 0.2)
     bound = []
